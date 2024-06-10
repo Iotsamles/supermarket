@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>QR Code Generator</title>
+  <title>QR Code Generator and Google Sheets Data Display</title>
   <style>
     .input-and-button {
       display: flex;
@@ -11,7 +10,7 @@
     }
 
     .input-field {
-      height: 100px;
+      height: 30px;
       flex-grow: 1;
       width: 200px;
     }
@@ -26,9 +25,18 @@
       padding: 10px;
       margin-top: 20px;
     }
+
+    #tableDiv {
+      margin-top: 20px;
+    }
   </style>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
   <script>
+    var valider = 0;
+    // QR Code generation
     function generateQRCode() {
       var inputText = document.getElementById("inputText").value;
       var qrCodeContainer = document.getElementById("qrcode");
@@ -38,6 +46,72 @@
       qr.make();
       qrCodeContainer.innerHTML = qr.createImgTag();
     }
+
+    // Load the Visualization API and the corechart package
+    google.charts.load('current', { 'packages': ['corechart'] });
+
+    // Set a callback to run when the Google Visualization API is loaded
+    google.charts.setOnLoadCallback(initialize);
+
+    function initialize() {
+      document.getElementById('loadButton').addEventListener('click', function() {
+        Swal.fire({
+          title: 'Enter Password',
+          input: 'text',
+          inputLabel: 'Password',
+          inputPlaceholder: 'Enter the password'
+        }).then((result) => {
+          if (result.value === '123') { 
+            valider=1;
+            loadData();
+          } else {
+            Swal.fire('Incorrect password', '', 'error');
+          }
+        });
+      });
+    }
+
+    function loadData() {
+      // Spreadsheet URL
+      if (valider==1){
+      var spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/1sGaGmzf8R-VaJa_60zGLQnFIsYjaFBfXwq5PJJEuF-A/edit#gid=0';
+      var query = new google.visualization.Query(spreadsheetUrl);
+
+      // Send the query with a callback function
+      query.send(handleQueryResponse);
+      }
+    }
+
+    function handleQueryResponse(response) {
+      if (response.isError()) {
+        console.log('Error in query: ' + response.getMessage() + ' ' + response.getDetailedMessage());
+        return;
+      }
+
+      var data = response.getDataTable();
+      var tableDiv = document.getElementById('tableDiv');
+      tableDiv.innerHTML = '';
+
+      // Extract the data from the DataTable and reverse the order
+      var numRows = data.getNumberOfRows();
+      var numCols = data.getNumberOfColumns();
+      var html = '<table border="1">';
+      html += '<tr>';
+      for (var j = 0; j < numCols; j++) {
+        html += '<th>' + data.getColumnLabel(j) + '</th>';
+      }
+      html += '</tr>';
+      for (var i = numRows - 1; i >= 0; i--) { // Reverse the order
+        html += '<tr>';
+        for (var j = 0; j < numCols; j++) {
+          html += '<td>' + data.getValue(i, j) + '</td>';
+        }
+        html += '</tr>';
+      }
+      html += '</table>';
+      tableDiv.innerHTML = html;
+    }
+    setInterval(loadData, 20000);
   </script>
 </head>
 <body>
@@ -46,5 +120,8 @@
     <button class="my-button" onclick="generateQRCode()">Generate QR Code</button>
   </div>
   <div id="qrcode" class="qr-code"></div>
+
+  <button id="loadButton" class="my-button" style="margin-top: 20px;">Load Data</button>
+  <div id="tableDiv"></div>
 </body>
 </html>
